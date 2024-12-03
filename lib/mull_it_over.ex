@@ -16,7 +16,7 @@ defmodule MullItOver do
 
   def find_mul_with_instruction(file_path) do
     file_content = String.trim(File.read!(file_path))
-    [first | rest ] = Regex.split(~r/don't\(\)/, file_content, parts: 1000)
+    [first | rest ] = Regex.split(~r/don't\(\)/, file_content, parts: 1000) // manual verification hack
     rest_val = rest
       |> Enum.map(fn parts ->
         do_parts = Regex.split(~r/do\(\)/, parts, parts: 1000)
