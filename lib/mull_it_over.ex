@@ -1,5 +1,4 @@
 defmodule MullItOver do
-
   def mulsum(file_content) do
     Regex.scan(~r/mul\(\d{1,3},\d{1,3}\)/, file_content)
       |> Enum.map(fn [m] ->
@@ -30,6 +29,4 @@ defmodule MullItOver do
       |> Enum.sum()
     rest_val+mulsum(first)
   end
-
-
 end

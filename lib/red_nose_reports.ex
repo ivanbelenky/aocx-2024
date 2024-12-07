@@ -37,7 +37,5 @@ defmodule RedNoseReports do
   def safe_reports_remove(file_path) do
     unsafe_reports = safe_reports(file_path, true)
     unsafe_reports |> Enum.filter( fn report -> is_safe_remove(report) end)
-
   end
-
 end
