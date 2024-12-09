@@ -21,7 +21,7 @@ defmodule GuardGavillant do
     end
   end
 
-  def at2(mat, i, j) when i<0, do: :empty
+  def at2(_, i, j) when i<0 or j<0, do: :empty
 
   def at2(mat, i, j) do
     val = Enum.at(mat, j, []) |> Enum.at(i, :empty)
@@ -50,7 +50,7 @@ defmodule GuardGavillant do
       :right -> :down
       :down -> :left
       :left -> :up
-      _ -> raise "WTF?"
+      _ -> :nodir
     end
   end
 
@@ -89,66 +89,73 @@ defmodule GuardGavillant do
   #     - test for new square on the right
   #     - check button --> if not buttom
 
-  def o(:left), do: :right
-  def o(:right), do: :left
-  def o(:up), do: :down
-  def o(:down), do: :up
-
-
-  def _walks_back_to?(x0, y0, x, y, _, _, _) when {x0, y0} == {x, y}, do: true
-  def _walks_back_to?(_, _, _, _, _, :empty, _), do: false
-
-  def _walks_back_to?(x0, y0, x, y, arr, ?#, dir) do
-    newdir = next_dir(dir)
-    {newx, newy} = {x-dx(dir)+dx(newdir), y-dy(dir)+dy(newdir)}
-    _walks_back_to?(x0, y0, newx, newy, arr, at2(arr, newx, newy), newdir)
-  end
-
-  def _walks_back_to?(x0, y0, x, y, arr, char, dir) when char in [?., ?^] do
-    {newx, newy} = {x+dx(dir), y+dy(dir)}
-    _walks_back_to?(x0, y0, newx, newy, arr, at2(arr, newx, newy), dir)
-  end
-
-  def walks_back_to?(x0, y0, arr, dir) do
-    newdir = next_dir(dir)
-    {newx, newy} = {x0+dx(newdir), y0+dy(newdir)}
-    _walks_back_to?(x0, y0, newx, newy, arr, at2(arr, newx, newy), newdir)
-  end
-
-  def check_if_loop(set_idx, dir, x, y, arr) do
-    case walks_back_to?(x, y, arr, dir) do
-      true -> MapSet.put(set_idx, {x, y})
-      false -> set_idx
-    end
-  end
 
   def transition(x, y, arr, dir) do
     {newx, newy} = {x+dx(dir), y+dy(dir)}
     case at2(arr, newx, newy) do
-      :empty -> {-1, -1, :up}
+      :empty -> {-1, -1, :nodir}
       ?. -> {newx, newy, dir}
       ?^ -> {newx, newy, dir}
-      ?# -> {x+dx(next_dir(dir)), y+dy(next_dir(dir)), next_dir(dir)}
+      ?# -> {x, y, next_dir(dir)}
+      ?O -> {x, y, next_dir(dir)}
+      _ -> raise "WTF"
     end
   end
+
+  def _walks_back_to?(visited, x, y, dir, arr) do
+    {newx, newy, newdir} = transition(x, y, arr, dir)
+    if at2(arr, newx, newy) == :empty do
+      false
+    else
+      case MapSet.member?(visited, {newx, newy, newdir}) and newdir != :empty do
+        true -> true
+        false ->
+          visited = MapSet.put(visited, {newx, newy, newdir})
+          _walks_back_to?(visited, newx, newy, newdir, arr)
+        end
+    end
+  end
+
+
+  def check_if_loop(dir, x, y, arr) do
+    visited = MapSet.new()
+    visited = MapSet.put(visited, {x, y, dir})
+    _walks_back_to?(visited, x, y, dir, arr)
+  end
+
+
 
   def walk_and_check(set_idx, dir, x, y, arr, m, n) do
     if x >= m or y >= n or x<0 or y<0 do
       set_idx
     else
-      new_set_idx = check_if_loop(set_idx, dir, x, y, arr)
       {newx, newy, new_dir} = transition(x, y, arr, dir)
+      new_set_idx = case at2(arr, newx, newy) do
+        :empty -> set_idx
+        ?# -> set_idx
+        ?O -> set_idx
+        ?. ->
+          new_arr = List.update_at(arr, newy, fn row ->
+            List.replace_at(row, newx, ?O)
+          end)
+          IO.puts("\n\n")
+          IO.puts(Enum.join(new_arr, "\n"))
+          IO.puts("\n\n")
+          case check_if_loop(dir, x, y, new_arr) do
+            true -> MapSet.put(set_idx, {newx, newy})
+            false -> set_idx
+          end
+      end
       walk_and_check(new_set_idx, new_dir, newx, newy, arr, m, n)
     end
-
   end
 
   def number_of_possible_obstacles(input) do
-    arr = input_to_matrix(input)
+    arr = GuardGavillant.input_to_matrix(input)
     {guard_x, guard_y} = GuardGavillant.findguard_idx(arr, 0, 0, length(Enum.at(arr, 0)), length(arr))
     set_idx = MapSet.new()
     {m, n} = {length(Enum.at(arr, 0)), length(arr)}
-    set_idx = walk_and_check(set_idx, :up, guard_x, guard_y, arr, m, n)
+    set_idx = GuardGavillant.walk_and_check(set_idx, :up, guard_x, guard_y, arr, m, n)
     Enum.count(set_idx)
   end
 
@@ -158,3 +165,18 @@ end
 #mat = GuardGavillant.input_to_matrix(File.read!("./lib/input/guard_gavillant.txt"))
 #{guard_x, guard_y} = GuardGavillant.findguard_idx(mat, 0, 0, length(Enum.at(mat, 0)), length(mat))
 #GuardGavillant.walk_and_set_guard(MapSet.new(), :up, ?^, guard_x, guard_y, mat)
+
+# GuardGavillant.number_of_possible_obstacles(File.read!("./lib/input/guard_gavillant.txt"))
+
+# ipt = ~S"....#.....
+# .........#
+# ..........
+# ..#.......
+# .......#..
+# ..........
+# .#..^.....
+# ........#.
+# #.........
+# ......#..."
+
+# GuardGavillant.number_of_possible_obstacles(ipt)
