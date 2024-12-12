@@ -1,3 +1,2 @@
 defmodule Utils do
-
 end
