@@ -3,15 +3,16 @@ defmodule HoofIt do
     String.split(input, "\n") |> Enum.map(&to_charlist(&1))
   end
 
+  def at2(_, i, _) when i < 0, do: :xoverflow
+  def at2(_, _, j) when j < 0, do: :yoverflow
 
-  def at2(_, i, _) when i<0, do: :xoverflow
-  def at2(_, _, j) when j<0, do: :yoverflow
   def at2(input, i, j) do
     case y = Enum.at(input, j, :yoverflow) do
       :yoverflow -> :yoverflow
       _ -> Enum.at(y, i, :xoverflow)
     end
   end
+
   def at2(input, {i, j}), do: at2(input, i, j)
 
   def find_starts(_, _, _, :yoverflow, found), do: found
@@ -31,13 +32,16 @@ defmodule HoofIt do
   end
 
   def find_path(_, [], _, visited), do: Enum.count(visited)
+
   def find_path(mat, path, did, visited) do
     current_pos = Enum.at(path, -1)
     number_at = at2(mat, current_pos)
     {i, j} = current_pos
-    undone_transitions = Enum.filter([{i-1, j}, {i+1, j}, {i, j-1}, {i, j+1}], fn new_pos ->
-      !MapSet.member?(did, {current_pos, new_pos}) and at2(mat, new_pos) == number_at - ?0 + ?1
-    end)
+
+    undone_transitions =
+      Enum.filter([{i - 1, j}, {i + 1, j}, {i, j - 1}, {i, j + 1}], fn new_pos ->
+        !MapSet.member?(did, {current_pos, new_pos}) and at2(mat, new_pos) == number_at - ?0 + ?1
+      end)
 
     if length(undone_transitions) == 0 or number_at == ?9 do
       path = List.delete_at(path, -1)
@@ -55,9 +59,11 @@ defmodule HoofIt do
     current_pos = Enum.at(path, -1)
     number_at = at2(mat, current_pos)
     {i, j} = current_pos
-    undone_transitions = Enum.filter([{i-1, j}, {i+1, j}, {i, j-1}, {i, j+1}], fn new_pos ->
-      !MapSet.member?(did, {current_pos, new_pos}) and at2(mat, new_pos) == number_at - ?0 + ?1
-    end)
+
+    undone_transitions =
+      Enum.filter([{i - 1, j}, {i + 1, j}, {i, j - 1}, {i, j + 1}], fn new_pos ->
+        !MapSet.member?(did, {current_pos, new_pos}) and at2(mat, new_pos) == number_at - ?0 + ?1
+      end)
 
     if number_at == ?9 do
       1
@@ -66,13 +72,11 @@ defmodule HoofIt do
         did = MapSet.put(did, {current_pos, new_pos})
         path = List.insert_at(path, -1, new_pos)
         find_path2(mat, path, did)
-      end) |> Enum.sum()
+      end)
+      |> Enum.sum()
     end
   end
-
-
 end
-
 
 # input = ~S"89010123
 # 78121874
@@ -89,7 +93,6 @@ end
 # Enum.map(starts, fn start ->
 #   HoofIt.find_path(mat, [start], MapSet.new(), MapSet.new())
 # end) |> Enum.sum()
-
 
 # 89010123
 # 78121874

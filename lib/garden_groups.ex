@@ -60,9 +60,8 @@ defmodule GardenGroups do
 
   def get_mat(input), do: String.split(input, "\n") |> Enum.map(&to_charlist(&1))
 
-  def cost_calculator(mat, cidxs, :xoverflow, _, j, cost), do:
-    cost_calculator(mat, cidxs, at2(mat, 0, j + 1), 0, j + 1, cost)
-
+  def cost_calculator(mat, cidxs, :xoverflow, _, j, cost),
+    do: cost_calculator(mat, cidxs, at2(mat, 0, j + 1), 0, j + 1, cost)
 
   def cost_calculator(_mat, _cidxs, :yoverflow, _, _, cost), do: cost
 
