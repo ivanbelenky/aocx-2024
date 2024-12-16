@@ -33,15 +33,47 @@ defmodule ClawContraption do
     end
   end
 
+  def _solve_claw2(target, btn_a, btn_b) do
+    {{ax, ay}, {bx, by}, {tx, ty}} = {btn_a, btn_b, target}
+    case det = ax*by - bx*ay do
+      0 ->
+        case rem(tx, ax) == rem(ty, ay) and rem(tx, ax) == 0 do
+          true ->
+            n_a = div(tx, ax)
+            n_b = div(tx, bx)
+            cond do
+              n_a >= 3*n_b -> {0, n_b}
+              n_a < 3*n_b -> {n_a, 0}
+            end
+        end
+      _ ->
+        # A = ([ax, bx], [ay, by])
+        # A^{-1} = 1/det(A) * ([d, -b], [-c, a]) --> 1/det * ([by, -bx], [-ay, ax])
+        # [ca, cb] = A^{-1} * [tx, ty] --> ca = by*tx - bx*cy
+        ca = (by*tx - bx*ty)/det
+        cb = (-ay*tx + ax*ty)/det
+        case {Float.round(ca) - ca, Float.round(cb) - cb} do
+          {a, b} when abs(a) < 1.0e-10 and abs(b) < 1.0e-10 ->
+            {round(ca), round(cb)}
+          _ ->
+            :unsolvable
+        end
+    end
+  end
 
-  def solve_claw(btn_a, btn_b, target) do
+
+  def solve_claw(btn_a, btn_b, target, part) do
     {target_x, target_y} = target
     {bx, by} = btn_b
     cond do
       true ->
         b_init = max(div(target_x, bx), div(target_y, by)) + 1
         a_init = 0
-        _solve_claw(a_init, b_init, target, btn_a, btn_b)
+        case part do
+          1 -> _solve_claw(a_init, b_init, target, btn_a, btn_b)
+          2 -> _solve_claw2(target, btn_a, btn_b)
+        end
+
     end
   end
 end
