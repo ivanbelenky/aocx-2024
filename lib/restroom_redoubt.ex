@@ -92,16 +92,3 @@ defmodule RestroomRedoubt do
   end
 
 end
-
-
-# import RestroomRedoubt
-# input = File.read!("./lib/input/restroom_redoubt.txt")
-# pvs = parse_input(input)
-# positions = Enum.map(pvs, fn {p,v} -> transition(p, v, 100, {101,103}) end) |> Enum.map(&transform_to_natural_units(&1, {101, 103}))
-# pattern = [~c"#1#", ~c"111", ~c"111"]
-Enum.filter(1..10_000, fn i ->
-  positions = Enum.map(pvs, fn {p,v} -> transition(p, v, i, {101,103}) end) |> Enum.map(&transform_to_natural_units(&1, {101, 103}))
-  grid = positions_to_grid(positions, {101, 103})
-  IO.puts(i)
-  find_pattern_matches(grid)!=0
-end)
