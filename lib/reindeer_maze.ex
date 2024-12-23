@@ -63,9 +63,6 @@ defmodule ReindeerMaze do
     {x, y} = current_node
     current_direction = Map.get(directions, current_node)
     dist_to_here = Map.get(distances, current_node)
-    IO.puts("\n\n")
-
-    IO.inspect("checking on node #{inspect(current_node)}, dir: #{current_direction}")
 
     neighbors = Enum.map(@all_dr, fn {dx, dy} -> {x + dx, y + dy} end)
 
@@ -73,8 +70,6 @@ defmodule ReindeerMaze do
       Enum.filter(neighbors, fn n ->
         MapSet.member?(unvisited_nodes, n)
       end)
-
-    IO.inspect(unvisited_neighbors, label: "unvisited neighbors")
 
     {new_distances, new_directions} =
       Enum.reduce(unvisited_neighbors, {distances, directions}, fn {nx, ny}, {acc_d, acc_dir} ->
@@ -85,10 +80,6 @@ defmodule ReindeerMaze do
 
         case needs_update do
           false ->
-            IO.inspect(
-              "#{inspect(current_node)} -> #{inspect({nx, ny})} does not need update, #{new_d} >= #{old_d}"
-            )
-
             {acc_d, acc_dir}
 
           true ->
@@ -96,10 +87,6 @@ defmodule ReindeerMaze do
 
             new_direction =
               if needs_rot, do: new_direction(current_node, {nx, ny}), else: current_direction
-
-            IO.inspect(
-              "Updating path from #{inspect(current_node)} to #{inspect({nx, ny})}: distance #{new_d} < #{old_d}, direction changing from #{Map.get(acc_dir, {nx, ny}, "none")} to #{new_direction}"
-            )
 
             acc_dir = Map.put(acc_dir, {nx, ny}, new_direction)
             {acc_d, acc_dir}
