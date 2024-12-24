@@ -59,7 +59,15 @@ defmodule ReindeerMaze do
     end
   end
 
-  def dijkstra(current_node, unvisited_nodes, distances, directions) do
+  def dijkstra(
+        current_node,
+        visited_nodes,
+        unvisited_nodes,
+        distances,
+        directions
+      ) do
+    new_visited = MapSet.put(visited_nodes, current_node)
+
     {x, y} = current_node
     current_direction = Map.get(directions, current_node)
     dist_to_here = Map.get(distances, current_node)
@@ -76,13 +84,12 @@ defmodule ReindeerMaze do
         needs_rot = needs_rotation?({nx, ny}, current_node, current_direction)
         new_d = if(needs_rot, do: 1001, else: 1) + dist_to_here
         old_d = Map.get(acc_d, {nx, ny}, :infinity)
-        needs_update = old_d > new_d
 
-        case needs_update do
-          false ->
+        cond do
+          new_d > old_d ->
             {acc_d, acc_dir}
 
-          true ->
+          new_d < old_d ->
             acc_d = Map.put(acc_d, {nx, ny}, new_d)
 
             new_direction =
@@ -98,12 +105,110 @@ defmodule ReindeerMaze do
 
     case Enum.count(new_unvisited) do
       0 -> {new_directions, new_distances}
-      _ -> dijkstra(min_node, new_unvisited, new_distances, new_directions)
+      _ -> dijkstra(min_node, new_visited, new_unvisited, new_distances, new_directions)
+    end
+  end
+
+  @directions [:left, :right, :up, :down]
+
+  def opposite?(a, b) do
+    case {a, b} do
+      {:up, :down} -> true
+      {:down, :up} -> true
+      {:left, :right} -> true
+      {:right, :left} -> true
+      _ -> false
+    end
+  end
+
+  def dijkstra_modified(
+        current_state,
+        visited_states,
+        unvisited_states,
+        distances,
+        paths_to_state
+      ) do
+    {x, y, dir} = current_state
+    new_visited = Enum.reduce(@directions, visited_states, &MapSet.put(&2, {x, y, &1}))
+    dist_to_here = Map.get(distances, current_state)
+
+    neighbors = Enum.map(@all_dr, fn {dx, dy} -> {x + dx, y + dy} end)
+
+    unvisited_neighbors =
+      Enum.filter(neighbors, fn {nx, ny} ->
+        Enum.map(@directions, &MapSet.member?(unvisited_states, {nx, ny, &1})) |> Enum.any?()
+      end)
+
+    {new_distances, new_paths_to_state} =
+      Enum.reduce(unvisited_neighbors, {distances, paths_to_state}, fn {nx, ny},
+                                                                       {acc_d, acc_paths} ->
+        new_dir = new_direction({x, y}, {nx, ny})
+        needs_rot = dir != new_dir
+        d_modifier = if needs_rot, do: 1000, else: 0
+        nd = [{nx, ny, new_dir, dist_to_here + 1 + d_modifier}]
+        rest_of_dirs = []
+
+        new_distances =
+          nd ++
+            Enum.map(rest_of_dirs, fn other_dir ->
+              {nx, ny, other_dir, dist_to_here + 1 + d_modifier + 1000}
+            end)
+
+        Enum.reduce(new_distances, {acc_d, acc_paths}, fn {nx, ny, direction, the_distance},
+                                                          {acc_distances, acc_paths_to_state} ->
+          old_d = Map.get(distances, {nx, ny, direction})
+          new_d = the_distance
+          key = {nx, ny, direction}
+
+          cond do
+            old_d < new_d ->
+              {acc_distances, acc_paths_to_state}
+
+            old_d == new_d ->
+              next_paths = Map.get(acc_paths_to_state, key)
+              current_paths = Map.get(acc_paths_to_state, current_state)
+              new_path_items = MapSet.union(next_paths, MapSet.put(current_paths, current_state))
+              new_acc_paths_to_state = Map.put(acc_paths_to_state, key, new_path_items)
+
+              {acc_distances, new_acc_paths_to_state}
+
+            old_d > new_d ->
+              current_paths = Map.get(acc_paths_to_state, current_state)
+              new_path_items = MapSet.put(current_paths, current_state)
+              new_acc_distances = Map.put(acc_distances, key, new_d)
+              new_acc_paths_to_state = Map.put(acc_paths_to_state, key, new_path_items)
+              {new_acc_distances, new_acc_paths_to_state}
+          end
+        end)
+      end)
+
+    new_unvisited = MapSet.delete(unvisited_states, current_state)
+
+    case Enum.count(new_unvisited) do
+      0 ->
+        {new_distances, new_paths_to_state}
+
+      _ ->
+        min_state = Enum.min_by(unvisited_states, &Map.get(distances, &1))
+
+        case Map.get(distances, min_state) == :infinity do
+          true ->
+            {new_distances, new_paths_to_state}
+
+          false ->
+            dijkstra_modified(
+              min_state,
+              new_visited,
+              new_unvisited,
+              new_distances,
+              new_paths_to_state
+            )
+        end
     end
   end
 end
 
-# input = File.read!("./lib/input/reindeer_maze.txt")
+#
 
 # input = ~S"###############
 # .......#....E#
@@ -120,6 +225,8 @@ end
 # .###.#.#.#.#.#
 # S..#.....#...#
 ############### "
+
+# input = File.read!("./lib/input/reindeer_maze.txt")
 # import ReindeerMaze
 # import Utils
 # grid = parse_input(input)
@@ -127,10 +234,28 @@ end
 # edges = create_edges(wpos)
 # pos = find_start(grid)
 # nodes = nodes(grid)
-# unvisited_nodes = MapSet.new(nodes)
+# unvisited_nodes = Enum.map(nodes, fn {nx, ny} -> Enum.map([:left, :right, :up, :down], &({nx, ny, &1})) end) |> List.flatten() |> MapSet.new()
 # distances = Enum.reduce(nodes, Map.new(), fn node, acc ->
-#   Map.put(acc, node, :infinity)
+#   Enum.reduce([:left, :right, :up, :down], acc, fn dir, acc_dir ->
+#     {nx, ny} = node
+#     Map.put(acc_dir, {nx, ny, dir}, :infinity)
+#   end)
 # end)
-# distances = Map.put(distances, pos, 0)
-# directions = %{pos => :right}
-# {dir, dist} = dijkstra(pos, unvisited_nodes, distances, directions)
+# {posx, posy} = pos
+# distances = Map.put(distances, {posx, posy, :right}, 0)
+# distances = Map.put(distances, {posx, posy, :up}, 1000)
+# distances = Map.put(distances, {posx, posy, :down}, 1000)
+# distances = Map.put(distances, {posx, posy, :left}, 1000)
+# {start_x, start_y} = find_start(grid)
+# paths = Enum.reduce(nodes, Map.new(), fn node, acc ->
+#   Enum.reduce([:left, :right, :up, :down], acc, fn dir, acc_paths ->
+#     {nx, ny} = node
+#     Map.put(acc_paths, {nx, ny, dir}, MapSet.new())
+#   end)
+# end)
+# {distances, paths} = dijkstra_modified({start_x, start_y, :right}, MapSet.new(), unvisited_nodes, distances, paths)
+# {endx,endy} = find_end(grid)
+
+# Solution I am lazy
+# e = {endx, endy, :up}
+# paths[e] |> Enum.map(fn {x,y,_z} -> {x,y} end) |> MapSet.new() |> Enum.count()
