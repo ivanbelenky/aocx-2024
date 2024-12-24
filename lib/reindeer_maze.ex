@@ -145,41 +145,32 @@ defmodule ReindeerMaze do
         new_dir = new_direction({x, y}, {nx, ny})
         needs_rot = dir != new_dir
         d_modifier = if needs_rot, do: 1000, else: 0
-        nd = [{nx, ny, new_dir, dist_to_here + 1 + d_modifier}]
-        rest_of_dirs = []
+        the_distance = dist_to_here + 1 + d_modifier
+        direction = new_dir
 
-        new_distances =
-          nd ++
-            Enum.map(rest_of_dirs, fn other_dir ->
-              {nx, ny, other_dir, dist_to_here + 1 + d_modifier + 1000}
-            end)
+        old_d = Map.get(distances, {nx, ny, new_dir})
+        new_d = the_distance
+        key = {nx, ny, direction}
 
-        Enum.reduce(new_distances, {acc_d, acc_paths}, fn {nx, ny, direction, the_distance},
-                                                          {acc_distances, acc_paths_to_state} ->
-          old_d = Map.get(distances, {nx, ny, direction})
-          new_d = the_distance
-          key = {nx, ny, direction}
+        cond do
+          old_d < new_d ->
+            {acc_d, acc_paths}
 
-          cond do
-            old_d < new_d ->
-              {acc_distances, acc_paths_to_state}
+          old_d == new_d ->
+            next_paths = Map.get(acc_paths, key)
+            current_paths = Map.get(acc_paths, current_state)
+            new_path_items = MapSet.union(next_paths, MapSet.put(current_paths, current_state))
+            new_acc_paths_to_state = Map.put(acc_paths, key, new_path_items)
 
-            old_d == new_d ->
-              next_paths = Map.get(acc_paths_to_state, key)
-              current_paths = Map.get(acc_paths_to_state, current_state)
-              new_path_items = MapSet.union(next_paths, MapSet.put(current_paths, current_state))
-              new_acc_paths_to_state = Map.put(acc_paths_to_state, key, new_path_items)
+            {acc_d, new_acc_paths_to_state}
 
-              {acc_distances, new_acc_paths_to_state}
-
-            old_d > new_d ->
-              current_paths = Map.get(acc_paths_to_state, current_state)
-              new_path_items = MapSet.put(current_paths, current_state)
-              new_acc_distances = Map.put(acc_distances, key, new_d)
-              new_acc_paths_to_state = Map.put(acc_paths_to_state, key, new_path_items)
-              {new_acc_distances, new_acc_paths_to_state}
-          end
-        end)
+          old_d > new_d ->
+            current_paths = Map.get(acc_paths, current_state)
+            new_path_items = MapSet.put(current_paths, current_state)
+            new_acc_distances = Map.put(acc_d, key, new_d)
+            new_acc_paths_to_state = Map.put(acc_paths, key, new_path_items)
+            {new_acc_distances, new_acc_paths_to_state}
+        end
       end)
 
     new_unvisited = MapSet.delete(unvisited_states, current_state)
@@ -208,23 +199,6 @@ defmodule ReindeerMaze do
   end
 end
 
-#
-
-# input = ~S"###############
-# .......#....E#
-# .#.###.#.###.#
-# .....#.#...#.#
-# .###.#####.#.#
-# .#.#.......#.#
-# .#.#####.###.#
-# ...........#.#
-### .#.#####.#.#
-# ...#.....#.#.#
-# .#.#.###.#.#.#
-# .....#...#.#.#
-# .###.#.#.#.#.#
-# S..#.....#...#
-############### "
 
 # input = File.read!("./lib/input/reindeer_maze.txt")
 # import ReindeerMaze
