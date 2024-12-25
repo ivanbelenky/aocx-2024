@@ -199,7 +199,6 @@ defmodule ReindeerMaze do
   end
 end
 
-
 # input = File.read!("./lib/input/reindeer_maze.txt")
 # import ReindeerMaze
 # import Utils
