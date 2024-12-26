@@ -63,7 +63,7 @@ defmodule ChronospatialComputer do
     Bitwise.bxor(a, b)
   end
 
-  def _run_program(_, _, ip, output, pl) when ip >= pl, do: output
+  def _run_program(_, registers, ip, output, pl) when ip >= pl, do: {registers, output}
 
   def _run_program(program, registers, ip, output, pl) do
     op = Enum.at(program, ip)
@@ -78,4 +78,28 @@ defmodule ChronospatialComputer do
     output = []
     _run_program(program, registers, 0, output, pl)
   end
+
+  # SOLUTION TO PART2:
+  # The solution to Part 2 came from the idea of grabbing the program and
+  # try to understand its semantics. The main fact is that there is a loop running
+  # as many times as the highest power of 8 that is less than the value of register A.
+  # If the program needs to spit itself then, one is bounded in between of
+
+  # 8^15 - 8^16 ~ 246 billion possibilities.
+  # It became apparent then that if program({:A=number}) == [out]
+  # program({:A=number*8**n}) = [x0, ..., xn-1, out] where xi is "garbage"
+  # then one needs to compose via this "shifting" rule, two long pieces
+  # for this I cached a map between output-->number where number in [0, 8**8)
+  # then it was just manual search and replace.
+
+  # PROGRAM:  2,4,1,2,7,5,4,3,0,3,1,7,5,5,3,0
+  # Starting state:                    {:A=A0,    :B=0,         :C=0}
+  # (2,4) :A % 8 -> :B                 {:A=A0,    :B=A0%8,      :C=0}
+  # (1,2) :B ^ 2 -> :B                 {:A=A0,    :B=(A0%8)^2,  :C=0}
+  # (7,5) :A / 2**:B -> :C             {:A=A0,    :B=(A0%8)^2,  :C=A0/(2^((A0%8)^2))}
+  # (4,3) :B ^ :C -> :B                {:A=A0,    :B=(A0%8)^2 ^ (A0/(2^((A0%8)^2))), :C=A0/(2^((A0%8)^2))}
+  # (0,3) :A / 8 -> :A                 {:A=A0/8,  :B=(A0%8)^2 ^ (A0/(2^((A0%8)^2))), :C=A0/(2^((A0%8)^2))}
+  # (1,7) :B ^ 7 -> :B                 {:A=A0/8,  :B=((A0%8)^2 ^ (A0/(2^((A0%8)^2))))^7, :C=A0/(2^((A0%8)^2))}
+  # (5,5) OUTPUT :B % 8                # Outputs: ((A0%8)^2 ^ (A0/(2^((A0%8)^2))))^7 % 8
+  # (3,0) jump to start if A != 0       # Loop back to start if A0/8 != 0
 end
