@@ -48,11 +48,11 @@ defmodule RamRun do
       _ ->
         min_state = Enum.min_by(unvisited_states, &Map.get(distances, &1))
 
-        case Map.get(distances, min_state) == :infinity do
-          true ->
+        case is_integer(Map.get(distances, min_state)) do
+          false ->
             new_distances
 
-          false ->
+          true ->
             dijkstra_modified(
               min_state,
               new_visited,
@@ -118,11 +118,10 @@ defmodule RamRun do
         distances = get_distances(unvisited_states)
         new_dists = dijkstra_modified({0, 0}, MapSet.new(), unvisited_states, distances)
 
-        case new_dists[{70, 70}] == :infinity do
-          true ->
-            enderino
-
+        case is_integer(new_dists[{70, 70}]) do
           false ->
+            enderino
+          true ->
             new_path = find_path({70, 70}, new_dists[{70, 70}], new_dists, [{70, 70}])
             find_stopping_byte(enderino + 1, new_dists, all_fallen_bytes, new_path)
         end
